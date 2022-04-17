@@ -89,7 +89,7 @@ func main() {
 	statsResponse := StatsResponse{}
 	json.Unmarshal(responseBody, &statsResponse)
 	
-	log.Println("Name: " + statsResponse.Character.Name);
+	// log.Println("Name: " + statsResponse.Character.Name);
 
 	var dungeonCategory CategoryResponse
 	for _, cat := range statsResponse.Categories {
@@ -135,7 +135,18 @@ func main() {
 		}
 	}
 
-	fmt.Printf(body)
+	// fmt.Printf(body)
+
+	var html []byte
+	html, err = ioutil.ReadFile("index.src.html")
+	if err != nil {
+		log.Fatal("Unable to read html source")
+	}
+
+	wowRe := regexp.MustCompile("{{wow}}")
+	readied := wowRe.ReplaceAllString(string(html), body)
+
+	ioutil.WriteFile("index.html", []byte(readied), 0644)
 	
 	log.Println("Done")
 }
