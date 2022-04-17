@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 	"io/ioutil"
-	"strconv"
+	"fmt"
+	"regexp"
+	// "strconv"
 	"github.com/joho/godotenv"
 	"encoding/json"
 	"golang.org/x/oauth2"
@@ -116,12 +118,24 @@ func main() {
 		expStats = append(expStats, curDungeonStats)
 	}
 
+	var body string
+	re := regexp.MustCompile("^(.*) \\((.*)\\)$")
 	for _, curExp := range expStats {
-		log.Println(curExp.Name)
+		// log.Println(curExp.Name)
+		dungeonToCount := make(map[string]int)
 		for _, dungeonStats := range curExp.Counts {
-			log.Println("  " + dungeonStats.Description + ": " + strconv.Itoa(dungeonStats.Quantity))
+			matches := re.FindStringSubmatch(dungeonStats.Description)
+			if _, ok := dungeonToCount[matches[2]]; !ok {
+				dungeonToCount[matches[2]] = 0
+			}
+			dungeonToCount[matches[2]] += dungeonStats.Quantity
+		}
+		for dungeonName, count := range dungeonToCount {
+			body += fmt.Sprintf("%s - %s: %d\n", curExp.Name, dungeonName, count)
 		}
 	}
+
+	fmt.Printf(body)
 	
 	log.Println("Done")
 }
