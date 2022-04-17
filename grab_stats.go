@@ -164,32 +164,32 @@ func main() {
 			mostRecentAtTime = retrievedMostRecentAtTime
 		}
 		for _, retrievedDungeonStats := range retrievedAllExpsStats {
-			foundI := -1
+			var matchingExpStats *ExpansionDungeonStats
 			for i := range expStatsAry {
 				if expStatsAry[i].Name == retrievedDungeonStats.Name {
-					foundI = i
+					matchingExpStats = &expStatsAry[i]
 					break
 				}
 			}
-			if foundI == -1 {
+			if matchingExpStats == nil {
 				expStatsAry = append(expStatsAry, ExpansionDungeonStats{
 					Name: retrievedDungeonStats.Name,
 				})
-				foundI = len(expStatsAry) - 1
+				matchingExpStats = &expStatsAry[len(expStatsAry) - 1]
 			}
 
 			// retrievedDungeonStats.Counts == [Black Rook Hold, Eye of Ashara, ...]
 			for _, retrievedCount := range retrievedDungeonStats.Counts {
 				found := false
-				for i := range expStatsAry[foundI].Counts {
-					if expStatsAry[foundI].Counts[i].Description == retrievedCount.Description {
+				for i := range (*matchingExpStats).Counts {
+					if (*matchingExpStats).Counts[i].Description == retrievedCount.Description {
 						found = true
-						expStatsAry[foundI].Counts[i].Quantity += retrievedCount.Quantity
+						(*matchingExpStats).Counts[i].Quantity += retrievedCount.Quantity
 						break
 					}
 				}
 				if !found {
-					expStatsAry[foundI].Counts = append(expStatsAry[foundI].Counts, DungeonFinishedCount{
+					(*matchingExpStats).Counts = append((*matchingExpStats).Counts, DungeonFinishedCount{
 						Description: retrievedCount.Description,
 						Quantity: retrievedCount.Quantity,
 					})
