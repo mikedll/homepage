@@ -27,7 +27,7 @@ type CharacterResponse struct {
 type SubCatStatisticsResponse struct {
 	Id    int     `json:"id"`
 	Name  string  `json:"name"`
-	Quantity int  `json:"quantity"`
+	Quantity float64  `json:"quantity"`
 }
 
 type SubCategoryResponse struct {
@@ -82,6 +82,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error when parsing body" + err.Error())
 	}
+	// log.Println(string(responseBody))
 
 	statsResponse := StatsResponse{}
 	json.Unmarshal(responseBody, &statsResponse)
@@ -103,10 +104,9 @@ func main() {
 	for _, subCat := range dungeonCategory.SubCategories {
 		finishedCounts := []DungeonFinishedCount{}
 		for _, subCatStats := range subCat.Statistics {
-			log.Println("Found quantity of sub cat stats " + strconv.Itoa(subCatStats.Id) + " - " + strconv.Itoa(subCatStats.Quantity))
 			finishedCounts = append(finishedCounts, DungeonFinishedCount {
 				Description: subCatStats.Name,
-				Quantity: subCatStats.Quantity,
+				Quantity: int(subCatStats.Quantity),
 			})
 		}
 		curDungeonStats := ExpansionDungeonStats {
