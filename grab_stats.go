@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"io/ioutil"
+	"strconv"
 	"github.com/joho/godotenv"
 	"encoding/json"
 	"golang.org/x/oauth2"
@@ -98,16 +99,28 @@ func main() {
 		log.Fatal("Didn't find dungeon category")
 	}
 
-	var stats []ExpansionDungeonStats = []ExpansionDungeonStats{}
+	var expStats []ExpansionDungeonStats = []ExpansionDungeonStats{}
 	for _, subCat := range dungeonCategory.SubCategories {
-		curStats := ExpansionDungeonStats {
-			Name: subCat.Name,
+		finishedCounts := []DungeonFinishedCount{}
+		for _, subCatStats := range subCat.Statistics {
+			log.Println("Found quantity of sub cat stats " + strconv.Itoa(subCatStats.Id) + " - " + strconv.Itoa(subCatStats.Quantity))
+			finishedCounts = append(finishedCounts, DungeonFinishedCount {
+				Description: subCatStats.Name,
+				Quantity: subCatStats.Quantity,
+			})
 		}
-		stats = append(stats, curStats)
+		curDungeonStats := ExpansionDungeonStats {
+			Name: subCat.Name,
+			Counts: finishedCounts,
+		}
+		expStats = append(expStats, curDungeonStats)
 	}
 
-	for _, cur := range stats {
-		log.Println(cur.Name)
+	for _, curExp := range expStats {
+		log.Println(curExp.Name)
+		for _, dungeonStats := range curExp.Counts {
+			log.Println("  " + dungeonStats.Description + ": " + strconv.Itoa(dungeonStats.Quantity))
+		}
 	}
 	
 	log.Println("Done")
