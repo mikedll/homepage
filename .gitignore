@@ -5,3 +5,6 @@
 .env
 
 grab_stats
+
+.emacs.desktop
+.emacs.desktop.lock

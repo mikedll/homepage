@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"time"
+	"strings"
 	"net/http"
 	// "strconv"
 	"github.com/joho/godotenv"
@@ -156,9 +157,10 @@ func main() {
 
 	client := oauth2Conf.Client(oauth2.NoContext)
 
+	charList := strings.Split(os.Getenv("BNET_CHARS"), ",")
 	expStatsAry := []ExpansionDungeonStats{}
 	var mostRecentAtTime time.Time
-	for _, name := range ([]string{"niktonian", "audney"}) {
+	for _, name := range (charList) {
 		retrievedAllExpsStats, retrievedMostRecentAtTime := getCharAllExpsStats(client, name)
 		if retrievedMostRecentAtTime.After(mostRecentAtTime) {
 			mostRecentAtTime = retrievedMostRecentAtTime
