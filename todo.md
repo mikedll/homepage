@@ -1,6 +1,4 @@
 
-render timetsamp
-
-include use other users' dungeons
+move users to .env
 
 tally Exp totals

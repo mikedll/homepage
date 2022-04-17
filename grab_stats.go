@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"time"
+	"net/http"
 	// "strconv"
 	"github.com/joho/godotenv"
 	"encoding/json"
@@ -61,23 +62,8 @@ type ExpansionDungeonStats struct {
 	Counts []DungeonFinishedCount
 }
 
-func main() {
-	if(fileExists(".env")) {
-		loadErr := godotenv.Load()
-		if loadErr != nil {
-			log.Fatal("Error loading .env file")
-		}
-	}
-
-	oauth2Conf := &clientcredentials.Config{
-		ClientID:     os.Getenv("BNET_CLIENT_ID"),
-		ClientSecret: os.Getenv("BNET_CLIENT_SECRET"),
-		TokenURL:     "https://us.battle.net/oauth/token",
-	}
-
-	client := oauth2Conf.Client(oauth2.NoContext)
-
-	response, err := client.Get("https://us.api.blizzard.com/profile/wow/character/aegwynn/niktonian/achievements/statistics?namespace=profile-us&locale=en_US")
+func getCharAllExpsStats(client *http.Client, charName string) ([]ExpansionDungeonStats, time.Time) {
+	response, err := client.Get("https://us.api.blizzard.com/profile/wow/character/aegwynn/" + charName + "/achievements/statistics?namespace=profile-us&locale=en_US")
 	if err != nil {
 		log.Fatal("Got error when retrieving stats")
 	}
@@ -125,8 +111,8 @@ func main() {
 	}
 	mostRecentAtTime := time.Unix(mostRecentAt / 1000, 0)
 
-	var body string
 	re := regexp.MustCompile("^(.*) \\((.*)\\)$")
+	rolledUpExpStats := []ExpansionDungeonStats{}
 	for _, curExp := range expStats {
 		// log.Println(curExp.Name)
 		dungeonToCount := make(map[string]int)
@@ -137,16 +123,94 @@ func main() {
 			}
 			dungeonToCount[matches[2]] += dungeonStats.Quantity
 		}
+		rolledUpDungeonCounts := []DungeonFinishedCount{}
 		for dungeonName, count := range dungeonToCount {
-			body += fmt.Sprintf("%s - %s: %d\n", curExp.Name, dungeonName, count)
+			rolledUpDungeonCounts = append(rolledUpDungeonCounts, DungeonFinishedCount{
+				Description: dungeonName,
+				Quantity: count,
+			})
+		}
+
+		rolledUpExpStats = append(rolledUpExpStats, ExpansionDungeonStats{
+			Name: curExp.Name,
+			Counts: rolledUpDungeonCounts,
+		})
+	}
+
+	return rolledUpExpStats, mostRecentAtTime
+}
+
+func main() {
+	if(fileExists(".env")) {
+		loadErr := godotenv.Load()
+		if loadErr != nil {
+			log.Fatal("Error loading .env file")
 		}
 	}
 
+	oauth2Conf := &clientcredentials.Config{
+		ClientID:     os.Getenv("BNET_CLIENT_ID"),
+		ClientSecret: os.Getenv("BNET_CLIENT_SECRET"),
+		TokenURL:     "https://us.battle.net/oauth/token",
+	}
+
+	client := oauth2Conf.Client(oauth2.NoContext)
+
+	expStatsAry := []ExpansionDungeonStats{}
+	var mostRecentAtTime time.Time
+	for _, name := range ([]string{"niktonian", "audney"}) {
+		retrievedAllExpsStats, retrievedMostRecentAtTime := getCharAllExpsStats(client, name)
+		if retrievedMostRecentAtTime.After(mostRecentAtTime) {
+			mostRecentAtTime = retrievedMostRecentAtTime
+		}
+		for _, retrievedDungeonStats := range retrievedAllExpsStats {
+			foundI := -1
+			for i := range expStatsAry {
+				if expStatsAry[i].Name == retrievedDungeonStats.Name {
+					foundI = i
+					break
+				}
+			}
+			if foundI == -1 {
+				expStatsAry = append(expStatsAry, ExpansionDungeonStats{
+					Name: retrievedDungeonStats.Name,
+				})
+				foundI = len(expStatsAry) - 1
+			}
+
+			// retrievedDungeonStats.Counts == [Black Rook Hold, Eye of Ashara, ...]
+			for _, retrievedCount := range retrievedDungeonStats.Counts {
+				found := false
+				for i := range expStatsAry[foundI].Counts {
+					if expStatsAry[foundI].Counts[i].Description == retrievedCount.Description {
+						found = true
+						expStatsAry[foundI].Counts[i].Quantity += retrievedCount.Quantity
+						break
+					}
+				}
+				if !found {
+					expStatsAry[foundI].Counts = append(expStatsAry[foundI].Counts, DungeonFinishedCount{
+						Description: retrievedCount.Description,
+						Quantity: retrievedCount.Quantity,
+					})
+				}
+			}
+		}
+	}
+
+	var body string
+	for _, curExp := range expStatsAry {
+		for _, dungeonCount := range curExp.Counts {
+			body += fmt.Sprintf("%s - %s: %d\n", curExp.Name, dungeonCount.Description, dungeonCount.Quantity)
+		}
+	}
+	
 	// fmt.Println(mostRecentAt)
-	body += mostRecentAtTime.Format("Mon Jan 2, 2006 at 3:04 MST") + "\n"
+	body += "\nLast Updated: " + mostRecentAtTime.Format("Mon Jan 2, 2006 at 3:04 MST") + "\n"
 	fmt.Printf(body)
 
 	var html []byte
+	var err error
 	html, err = ioutil.ReadFile("index.src.html")
 	if err != nil {
 		log.Fatal("Unable to read html source")
