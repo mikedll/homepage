@@ -208,7 +208,7 @@ func main() {
 	}
 	
 	// fmt.Println(mostRecentAt)
-	body += "\nLast Updated: " + mostRecentAtTime.Format("Mon Jan 2, 2006 at 3:04 MST") + "\n"
+	body += "\nLast Updated: " + mostRecentAtTime.Format("Mon Jan 2, 2006 at 3:04pm MST") + "\n"
 	fmt.Printf(body)
 
 	var html []byte
