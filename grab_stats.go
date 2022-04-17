@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"fmt"
 	"regexp"
+	"time"
 	// "strconv"
 	"github.com/joho/godotenv"
 	"encoding/json"
@@ -27,9 +28,10 @@ type CharacterResponse struct {
 }
 
 type SubCatStatisticsResponse struct {
-	Id    int     `json:"id"`
-	Name  string  `json:"name"`
-	Quantity float64  `json:"quantity"`
+	Id          int     `json:"id"`
+	Name        string  `json:"name"`
+	Quantity    float64 `json:"quantity"`
+	LastUpdated int64   `json:"last_updated_timestamp"`
 }
 
 type SubCategoryResponse struct {
@@ -103,6 +105,7 @@ func main() {
 	}
 
 	var expStats []ExpansionDungeonStats = []ExpansionDungeonStats{}
+	var mostRecentAt int64
 	for _, subCat := range dungeonCategory.SubCategories {
 		finishedCounts := []DungeonFinishedCount{}
 		for _, subCatStats := range subCat.Statistics {
@@ -110,6 +113,9 @@ func main() {
 				Description: subCatStats.Name,
 				Quantity: int(subCatStats.Quantity),
 			})
+			if mostRecentAt == 0 || subCatStats.LastUpdated > mostRecentAt {
+				mostRecentAt = subCatStats.LastUpdated
+			}
 		}
 		curDungeonStats := ExpansionDungeonStats {
 			Name: subCat.Name,
@@ -117,6 +123,7 @@ func main() {
 		}
 		expStats = append(expStats, curDungeonStats)
 	}
+	mostRecentAtTime := time.Unix(mostRecentAt / 1000, 0)
 
 	var body string
 	re := regexp.MustCompile("^(.*) \\((.*)\\)$")
@@ -135,7 +142,9 @@ func main() {
 		}
 	}
 
-	// fmt.Printf(body)
+	// fmt.Println(mostRecentAt)
+	body += mostRecentAtTime.Format("Mon Jan 2, 2006 at 3:04 MST") + "\n"
+	fmt.Printf(body)
 
 	var html []byte
 	html, err = ioutil.ReadFile("index.src.html")
