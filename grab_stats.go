@@ -242,7 +242,7 @@ func main() {
 	wowRe := regexp.MustCompile("{{wow}}")
 	readied := wowRe.ReplaceAllString(string(html), body)
 
-	ioutil.WriteFile("index.html", []byte(readied), 0644)
+	ioutil.WriteFile("./build-output/index.html", []byte(readied), 0644)
 	
 	log.Println("Done")
 }
