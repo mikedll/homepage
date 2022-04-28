@@ -10,4 +10,6 @@ grab_stats
 .emacs.desktop.lock
 
 
-build-output/*  
+build-output/*
+
+.netlify  
