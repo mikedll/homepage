@@ -60,6 +60,7 @@ type DungeonFinishedCount struct {
 
 type ExpansionDungeonStats struct {
 	Name  string
+	Total int
 	Counts []DungeonFinishedCount
 }
 
@@ -112,8 +113,11 @@ func getCharAllExpsStats(client *http.Client, charName string) ([]ExpansionDunge
 	}
 	mostRecentAtTime := time.Unix(mostRecentAt / 1000, 0)
 
-	re := regexp.MustCompile("^(.*) \\((.*)\\)$")
+	// "rolledUp" means special dungeons that have different
+	// end bosses, like Assault on Violet Hold, will be merged together.
 	rolledUpExpStats := []ExpansionDungeonStats{}
+
+	re := regexp.MustCompile("^(.*) \\((.*)\\)$")
 	for _, curExp := range expStats {
 		// log.Println(curExp.Name)
 		dungeonToCount := make(map[string]int)
@@ -122,6 +126,7 @@ func getCharAllExpsStats(client *http.Client, charName string) ([]ExpansionDunge
 			if _, ok := dungeonToCount[matches[2]]; !ok {
 				dungeonToCount[matches[2]] = 0
 			}
+			// log.Println("Found " + matches[2] + " in " + dungeonStats.Description)
 			dungeonToCount[matches[2]] += dungeonStats.Quantity
 		}
 		rolledUpDungeonCounts := []DungeonFinishedCount{}
@@ -132,8 +137,14 @@ func getCharAllExpsStats(client *http.Client, charName string) ([]ExpansionDunge
 			})
 		}
 
+		totalThisExp := 0
+		for _, rolledUpDungeonCount := range rolledUpDungeonCounts {
+			totalThisExp += rolledUpDungeonCount.Quantity
+		}
+
 		rolledUpExpStats = append(rolledUpExpStats, ExpansionDungeonStats{
 			Name: curExp.Name,
+			Total: totalThisExp,
 			Counts: rolledUpDungeonCounts,
 		})
 	}
@@ -161,51 +172,61 @@ func main() {
 	expStatsAry := []ExpansionDungeonStats{}
 	var mostRecentAtTime time.Time
 	for _, name := range (charList) {
-		retrievedAllExpsStats, retrievedMostRecentAtTime := getCharAllExpsStats(client, name)
+		charAllExpsStats, retrievedMostRecentAtTime := getCharAllExpsStats(client, name)
 		if retrievedMostRecentAtTime.After(mostRecentAtTime) {
 			mostRecentAtTime = retrievedMostRecentAtTime
 		}
-		for _, retrievedDungeonStats := range retrievedAllExpsStats {
+		for _, charExpDungeonStats := range charAllExpsStats {
 			var matchingExpStats *ExpansionDungeonStats
 			for i := range expStatsAry {
-				if expStatsAry[i].Name == retrievedDungeonStats.Name {
+				if expStatsAry[i].Name == charExpDungeonStats.Name {
 					matchingExpStats = &expStatsAry[i]
 					break
 				}
 			}
 			if matchingExpStats == nil {
 				expStatsAry = append(expStatsAry, ExpansionDungeonStats{
-					Name: retrievedDungeonStats.Name,
+					Name: charExpDungeonStats.Name,
+					Total: 0,
 				})
 				matchingExpStats = &expStatsAry[len(expStatsAry) - 1]
 			}
 
-			// retrievedDungeonStats.Counts == [Black Rook Hold, Eye of Ashara, ...]
-			for _, retrievedCount := range retrievedDungeonStats.Counts {
+			// charExpDungeonStats.Counts == [Black Rook Hold, Eye of Ashara, ...]
+			for _, charCount := range charExpDungeonStats.Counts {
 				found := false
 				for i := range (*matchingExpStats).Counts {
-					if (*matchingExpStats).Counts[i].Description == retrievedCount.Description {
+					if (*matchingExpStats).Counts[i].Description == charCount.Description {
 						found = true
-						(*matchingExpStats).Counts[i].Quantity += retrievedCount.Quantity
+						(*matchingExpStats).Counts[i].Quantity += charCount.Quantity
+						(*matchingExpStats).Total += charCount.Quantity
 						break
 					}
 				}
 				if !found {
 					(*matchingExpStats).Counts = append((*matchingExpStats).Counts, DungeonFinishedCount{
-						Description: retrievedCount.Description,
-						Quantity: retrievedCount.Quantity,
+						Description: charCount.Description,
+						Quantity: charCount.Quantity,
 					})
+					(*matchingExpStats).Total += charCount.Quantity
 				}
 			}
 		}
 	}
 
+	totalAllExps := 0
+	for _, curExp := range expStatsAry {
+		totalAllExps += curExp.Total
+	}
+	
 	var body string
 	for _, curExp := range expStatsAry {
 		for _, dungeonCount := range curExp.Counts {
 			body += fmt.Sprintf("%s - %s: %d\n", curExp.Name, dungeonCount.Description, dungeonCount.Quantity)
 		}
+		body += fmt.Sprintf("%s Total: %d\n", curExp.Name, curExp.Total)
 	}
+	body += fmt.Sprintf("All Expansions Total: %d\n", totalAllExps)
 	
 	// fmt.Println(mostRecentAt)
 	body += "\nLast Updated: " + mostRecentAtTime.Format("Mon Jan 2, 2006 at 3:04pm MST") + "\n"
