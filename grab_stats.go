@@ -160,6 +160,8 @@ func main() {
 		}
 	}
 
+	time.LoadLocation("America/Los_Angeles")
+	
 	oauth2Conf := &clientcredentials.Config{
 		ClientID:     os.Getenv("BNET_CLIENT_ID"),
 		ClientSecret: os.Getenv("BNET_CLIENT_SECRET"),
