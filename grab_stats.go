@@ -10,6 +10,7 @@ import (
 	"time"
 	"strings"
 	"net/http"
+	"sort"
 	// "strconv"
 	"github.com/joho/godotenv"
 	"encoding/json"
@@ -213,9 +214,30 @@ func main() {
 					(*matchingExpStats).Total += charCount.Quantity
 				}
 			}
+
+			sort.Slice((*matchingExpStats).Counts, func(i, j int) bool {
+				return (strings.Compare((*matchingExpStats).Counts[i].Description, (*matchingExpStats).Counts[j].Description) == -1)
+			})
 		}
 	}
 
+	expNameToOrder := map[string]int{
+		"Classic": 1,
+		"Burning Crusade": 2,
+		"Wrath of the Lich King": 3,
+		"Cataclysm": 4,
+		"Mists of Pandaria": 5,
+		"Warlords of Draenor": 6,
+		"Legion": 7,
+		"Battle for Azeroth": 8,
+		"Shadowlands": 9,
+		"Dragonflight": 10,
+	}
+	
+	sort.Slice(expStatsAry, func(i, j int) bool {
+		return expNameToOrder[expStatsAry[i].Name] < expNameToOrder[expStatsAry[j].Name]
+	})
+		
 	totalAllExps := 0
 	for _, curExp := range expStatsAry {
 		totalAllExps += curExp.Total
