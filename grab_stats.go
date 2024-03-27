@@ -65,17 +65,104 @@ type ExpansionDungeonStats struct {
 	Counts []DungeonFinishedCount
 }
 
+type AchievementCategory struct {
+  Name string `json:name`
+  Id int      `json:id`
+}
+
+type AchievementCategoriesResponse struct {
+  Categories []AchievementCategory   `json:categories`
+}
+
+type Character struct {
+  Id    int      `json:id`
+  Name  string   `json:name`
+}
+type Account struct {
+  Characters  []Character  `json:characters`
+}
+
+type AccountResponse struct {
+  Accounts []Account    `json:wow_accounts`
+}
+
+func listAchievementCategories(client *http.Client) {
+  // https://us.api.blizzard.com/data/wow/achievement-category/index?namespace=static-us&locale=en_US&access_token=US3sTZMJz8d7yhTSnslcYTTNnuBVvjMSvJ
+	response, err := client.Get("https://us.api.blizzard.com/data/wow/achievement-category/index" + 
+    "?namespace=static-us&locale=en_US")
+	if err != nil {
+		log.Fatal("Got error when retrieving stats")
+	}
+  
+	responseBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal("Error while reading body" + err.Error())
+	}
+	// log.Println(string(responseBody))
+  
+  if(response.StatusCode >= 300) {
+    log.Printf("Got bad status code when retrieving achievement categories: %d", response.StatusCode);
+    log.Printf("%s", responseBody)
+    log.Fatal("Exiting")
+  }
+  
+  achievementCategoriesResponse := AchievementCategoriesResponse{}
+  err = json.Unmarshal(responseBody, &achievementCategoriesResponse)
+  if(err != nil) {
+    log.Fatal("Failed to unmarshal achievement categories response")
+  }
+  
+  for _, cat := range achievementCategoriesResponse.Categories {
+    if strings.Contains(cat.Name, "Dungeons & Raids") {
+      log.Printf("%d, %s", cat.Id, cat.Name)      
+    } 
+  }
+}
+
+func listCharacters(config *clientcredentials.Config) {
+  var err error
+  myClient := http.Client{}
+  var response *http.Response
+  response, err = myClient.Get("https://us.api.blizzard.com/profile/user/wow?namespace=profile-us&locale=en_US&access_token=TOKEN_NEEDED")
+	if err != nil {
+		log.Fatal("Got error when retrieving stats")
+	}
+  
+	responseBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal("Error while reading body" + err.Error())
+	}
+	log.Println(string(responseBody))
+  
+  if(response.StatusCode >= 300) {
+    log.Printf("Got bad status code when retrieving account info (like characters): %d", response.StatusCode);
+    log.Printf("%s", responseBody)
+    log.Fatal("Exiting")
+  }
+  
+  accountResponse := AccountResponse{}
+  for _, char := range accountResponse.Accounts[0].Characters {
+    log.Printf("Name: %s", char.Name)
+  }
+}
+
 func getCharAllExpsStats(client *http.Client, charName string) ([]ExpansionDungeonStats, time.Time) {
 	response, err := client.Get("https://us.api.blizzard.com/profile/wow/character/aegwynn/" + charName + "/achievements/statistics?namespace=profile-us&locale=en_US")
 	if err != nil {
 		log.Fatal("Got error when retrieving stats")
 	}
-
+  
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal("Error when parsing body" + err.Error())
+		log.Fatal("Error while reading body" + err.Error())
 	}
 	// log.Println(string(responseBody))
+  
+  if(response.StatusCode >= 300) {
+    log.Printf("Got bad status code: %d", response.StatusCode);
+    log.Printf("%s", responseBody)
+    log.Fatal("Exiting")
+  }
 
 	statsResponse := StatsResponse{}
 	json.Unmarshal(responseBody, &statsResponse)
@@ -84,6 +171,7 @@ func getCharAllExpsStats(client *http.Client, charName string) ([]ExpansionDunge
 
 	var dungeonCategory CategoryResponse
 	for _, cat := range statsResponse.Categories {
+    log.Printf("Name: %s", cat.Name)
 		if cat.Name == "Dungeons & Raids" {
 			dungeonCategory = cat
 		}
@@ -170,7 +258,18 @@ func main() {
 	}
 
 	client := oauth2Conf.Client(oauth2.NoContext)
-
+  
+  if(len(os.Args) > 1) {
+    if(os.Args[1] == "list_acats") {
+      listAchievementCategories(client)
+    } else if(os.Args[1] == "list_chars") {
+      listCharacters(oauth2Conf);
+    } else {
+      log.Fatal("Unable to determine your request from the command line arguments")
+    }
+    return;
+  }  
+  
 	charList := strings.Split(os.Getenv("BNET_CHARS"), ",")
 	expStatsAry := []ExpansionDungeonStats{}
 	var mostRecentAtTime time.Time
@@ -266,6 +365,8 @@ func main() {
 	wowRe := regexp.MustCompile("{{wow}}")
 	readied := wowRe.ReplaceAllString(string(html), body)
 
+  log.Fatal("We no longer write output from this script. Blizzard's API didn't appear to be working when we" +
+    "last checked on this script.")
 	ioutil.WriteFile("./build-output/wow.html", []byte(readied), 0644)
 	
 	log.Println("Done")
