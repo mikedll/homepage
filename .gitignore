@@ -4,6 +4,9 @@
 
 .env
 
+
+node_modules/
+
 grab_stats
 
 .emacs.desktop

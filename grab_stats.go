@@ -258,7 +258,7 @@ func main() {
 
 	var html []byte
 	var err error
-	html, err = ioutil.ReadFile("index.src.html")
+	html, err = ioutil.ReadFile("wow.html")
 	if err != nil {
 		log.Fatal("Unable to read html source")
 	}
@@ -266,7 +266,7 @@ func main() {
 	wowRe := regexp.MustCompile("{{wow}}")
 	readied := wowRe.ReplaceAllString(string(html), body)
 
-	ioutil.WriteFile("./build-output/index.html", []byte(readied), 0644)
+	ioutil.WriteFile("./build-output/wow.html", []byte(readied), 0644)
 	
 	log.Println("Done")
 }

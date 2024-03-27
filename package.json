@@ -1,0 +1,22 @@
+{
+  "name": "homepage",
+  "version": "1.0.0",
+  "description": "My homepage",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mikedll/homepage.git"
+  },
+  "author": "Michael Rivera",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mikedll/homepage/issues"
+  },
+  "homepage": "https://github.com/mikedll/homepage#readme",
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}

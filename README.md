@@ -1,2 +1,3 @@
 
-Source code for my netlify homepage.
+Create .env with BNET_CLIENT_ID, BNET_CLIENT_SECRET.
+
